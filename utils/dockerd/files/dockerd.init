@@ -8,6 +8,7 @@ extra_command "ucidel" "<interface> <device> <zone> Delete docker bridge configu
 
 DOCKER_CONF_DIR="/tmp/dockerd"
 DOCKERD_CONF="${DOCKER_CONF_DIR}/daemon.json"
+http_proxy=""
 
 uci_quiet() {
 	uci -q "${@}" >/dev/null
@@ -184,6 +185,8 @@ process_config() {
 	config_get ip globals ip ""
 	config_get fixed_cidr globals fixed_cidr ""
 	config_get fixed_cidr_v6 globals fixed_cidr_v6 ""
+	config_get http_proxy globals http_proxy ""
+	[ -z "${http_proxy}" ] || http_proxy="--http-proxy=${http_proxy} --https-proxy=${http_proxy}"
 
 	. /usr/share/libubox/jshn.sh
 	json_init
@@ -218,9 +221,9 @@ start_service() {
 	procd_open_instance
 	procd_set_param stderr 1
 	if [ -z "${DOCKERD_CONF}" ]; then
-		procd_set_param command /usr/bin/dockerd
+		procd_set_param command /usr/bin/dockerd --live-restore $http_proxy
 	else
-		procd_set_param command /usr/bin/dockerd --config-file="${DOCKERD_CONF}"
+		procd_set_param command /usr/bin/dockerd --config-file="${DOCKERD_CONF}" --live-restore $http_proxy
 	fi
 	procd_set_param limits nofile="${nofile} ${nofile}"
 	procd_close_instance
